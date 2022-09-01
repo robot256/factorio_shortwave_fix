@@ -167,7 +167,7 @@ local function radio_tune(radio)
 end
 
 local function OnEntityCreated(event)
-	local entity = event.created_entity or event.entity
+	local entity = event.created_entity or event.entity or entity.destination
 
 	if not entity or not entity.valid then
 		return

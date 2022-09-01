@@ -1,11 +1,10 @@
 {
   "name": "shortwave_fix",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "factorio_version": "1.1",
   "title": "Shortwave for 1.1",
-  "author": "dorfl",
-  "contact": "Dorfl <ceramic.atheist@gmail.com>",
-  "homepage": "https://gitlab.com/aerosuidae/shortwave",
+  "author": "robot256",
+  "homepage": "https://github.com/robot256/factorio_shortwave_fix",
   "description": "Connect circuit networks via shortwave radio channels.",
   "dependencies": [
     "base >= 1.1.0",

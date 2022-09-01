@@ -1,4 +1,21 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.3.1
+Date: 01. 09. 2022
+  Changes:
+    - Updated changelog
+  Bugfixes:
+    - Attempted to fix on_entity_cloned behavior
+---------------------------------------------------------------------------------------------------
+Version: 0.3.0
+Date: 28. 03. 2021
+  Changes:
+    - Forked by robot256
+    - Added Factorio 1.1 support
+  Bugfixes:
+    - Fixed pipette behavior
+    - Attempted to improve blueprinting behavior
+    - Add support for script_raised_built and script_raised_destroy events
+---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 23. 01. 2020
   Changes:
