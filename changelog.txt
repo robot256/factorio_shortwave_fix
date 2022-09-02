@@ -4,7 +4,7 @@ Date: 01. 09. 2022
   Changes:
     - Updated changelog
   Bugfixes:
-    - Attempted to fix on_entity_cloned behavior
+    - Fixed on_entity_cloned behavior
 ---------------------------------------------------------------------------------------------------
 Version: 0.3.0
 Date: 28. 03. 2021
