@@ -205,18 +205,22 @@ local function OnEntityCreated(event)
 
 	-- check for cheat mode pipette of I/O port
 	if entity.name == "shortwave-port" then
-		local r = entity.surface.count_entities_filtered({
-			name = 'shortwave-radio',
-			area = {
-				left_top = { x = entity.position.x - 0.1, y = entity.position.y - 0.1 },
-				right_bottom = { x = entity.position.x + 0.1, y = entity.position.y + 0.1 },
-			}
-		})
-		if r == 0 then
-			game.print("Can't place shortwave I/O port alone.")
-			entity.destroy()
-			return
-		end
+    local stack = event.stack
+    -- If the port was *placed* by a valid blueprint, that means it was insta-placed by cheatmode or editor. Don't check for stranded ports.
+    if not (stack and stack.valid_for_read and (stack.name == "blueprint" or event.stack.name == "blueprint-book")) then
+      local r = entity.surface.count_entities_filtered({
+        name = 'shortwave-radio',
+        area = {
+          left_top = { x = entity.position.x - 0.1, y = entity.position.y - 0.1 },
+          right_bottom = { x = entity.position.x + 0.1, y = entity.position.y + 0.1 },
+        }
+      })
+      if r == 0 then
+        game.print("Can't place shortwave I/O port alone.")
+        entity.destroy()
+        return
+      end
+    end
 	end
 
 	if entity.name == "shortwave-radio" then
