@@ -175,12 +175,8 @@ local function OnEntityCreated(event)
 
   
 	-- check for blueprints missing io port or radio body
-	if entity.name == "entity-ghost"
-		and entity.ghost_name
-		and prefixed(entity.ghost_name, "shortwave-")
-	then
-
-		local r = entity.surface.count_entities_filtered({
+	if entity.name == "entity-ghost" and entity.ghost_name and prefixed(entity.ghost_name, "shortwave-") then
+    local r = entity.surface.count_entities_filtered({
 			ghost_name = 'shortwave-radio',
 			area = {
 				left_top = { x = entity.position.x - 0.1, y = entity.position.y - 0.1 },
@@ -207,6 +203,8 @@ local function OnEntityCreated(event)
 	if entity.name == "shortwave-port" then
     local stack = event.stack
     -- If the port was *placed* by a valid blueprint, that means it was insta-placed by cheatmode or editor. Don't check for stranded ports.
+    --game.print(serpent.line(event))
+    --game.print(game.players[event.player_index].cursor_stack.valid_for_read)
     if not (stack and stack.valid_for_read and (stack.name == "blueprint" or event.stack.name == "blueprint-book")) then
       local r = entity.surface.count_entities_filtered({
         name = 'shortwave-radio',
