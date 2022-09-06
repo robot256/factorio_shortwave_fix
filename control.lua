@@ -1,21 +1,6 @@
 
 blueprintLib = require("__Robot256Lib__/script/blueprint_replacement")
 
-local function serialize(t)
-  local s = {}
-  for k,v in pairs(t) do
-    if type(v) == "table" then
-      v = serialize(v)
-    end
-    s[#s+1] = tostring(k).." = "..tostring(v)
-  end
-  return "{ "..table.concat(s, ", ").." }"
-end
-
-local function prefixed(str, start)
-  return str:sub(1, #start) == start
-end
-
 local function check_state(force)
   if not global[force.index] then
     global[force.index] = {}
@@ -35,7 +20,6 @@ local function check_channels()
 end
 
 local function radio_link(radio)
-
   local links = radio.surface.find_entities_filtered({
     name = "shortwave-link",
     area = {
@@ -60,7 +44,6 @@ local function radio_link(radio)
 end
 
 local function radio_port(radio)
-
   local ports = radio.surface.find_entities_filtered({
     name = "shortwave-port",
     area = {
@@ -168,14 +151,8 @@ end
 
 local function OnEntityCreated(event)
   local entity = event.created_entity or event.entity or event.destination
-
-  if not entity or not entity.valid then
-    return
-  end
-
-  
   -- check for blueprints missing io port or radio body
-  if entity.name == "entity-ghost" and entity.ghost_name and prefixed(entity.ghost_name, "shortwave-") then
+  if entity.name == "entity-ghost" then
     local r = entity.surface.count_entities_filtered({
       ghost_name = 'shortwave-radio',
       area = {
@@ -197,10 +174,9 @@ local function OnEntityCreated(event)
       entity.destroy()
       return
     end
-  end
-
+  
   -- check for cheat mode pipette of I/O port
-  if entity.name == "shortwave-port" then
+  elseif entity.name == "shortwave-port" then
     local stack = event.stack
     -- If the port was *placed* by a valid blueprint, that means it was insta-placed by cheatmode or editor. Don't check for stranded ports.
     --game.print(serpent.line(event))
@@ -219,9 +195,8 @@ local function OnEntityCreated(event)
         return
       end
     end
-  end
-
-  if entity.name == "shortwave-radio" then
+  
+  elseif entity.name == "shortwave-radio" then
     check_state(entity.force)
     radio_tune(entity)
     check_channels()
@@ -230,17 +205,10 @@ end
 
 local function OnEntityRemoved(event)
   local entity = event.entity
-
-  if not entity or not entity.valid then
-    return
-  end
-
-  if entity.name == "shortwave-radio" then
-    check_state(entity.force)
-    radio_link(entity).destroy()
-    radio_port(entity).destroy()
-    check_channels()
-  end
+  check_state(entity.force)
+  radio_link(entity).destroy()
+  radio_port(entity).destroy()
+  check_channels()
 end
 
 local function OnEntitySettingsPasted(event)
@@ -281,23 +249,33 @@ remote.add_interface('shortwave', {
     end,
   })
 
-script.on_event({defines.events.on_built_entity, 
-    defines.events.on_robot_built_entity, 
-    defines.events.script_raised_built, 
-    defines.events.on_entity_cloned, 
-    defines.events.script_raised_revive}, OnEntityCreated)
 
-script.on_event({defines.events.on_player_mined_entity, 
-    defines.events.on_robot_pre_mined, 
-    defines.events.on_entity_died, 
-    defines.events.script_raised_destroy}, OnEntityRemoved)
+local built_filters = {
+    {filter = "name", name = "shortwave-radio"},
+    {filter = "name", name = "shortwave-port"},
+    {filter = "ghost", ghost_name = "shortwave-radio"},
+    {filter = "ghost", ghost_name = "shortwave-port"},
+  }
+script.on_event(defines.events.on_built_entity, OnEntityCreated, built_filters)
+script.on_event(defines.events.on_robot_built_entity, OnEntityCreated, built_filters)
+script.on_event(defines.events.script_raised_built, OnEntityCreated, built_filters)
+script.on_event(defines.events.on_entity_cloned, OnEntityCreated, built_filters)
+script.on_event(defines.events.script_raised_revive, OnEntityCreated, built_filters)
+
+    
+local mined_filters = {{filter = "name", name = "shortwave-radio"}}
+script.on_event(defines.events.on_player_mined_entity, OnEntityRemoved, mined_filters)
+script.on_event(defines.events.on_robot_pre_mined, OnEntityRemoved, mined_filters)
+script.on_event(defines.events.on_entity_died, OnEntityRemoved, mined_filters)
+script.on_event(defines.events.script_raised_destroy, OnEntityRemoved, mined_filters)
 
 script.on_event({defines.events.on_entity_settings_pasted}, OnEntitySettingsPasted)
 
-script.on_event(defines.events.on_player_pipette, 
-    function(event) blueprintLib.mapPipette(event, {["shortwave-port"]="shortwave-radio"}) end)
+script.on_event(defines.events.on_player_pipette, function(event)
+    blueprintLib.mapPipette(event, {["shortwave-port"]="shortwave-radio"})
+  end)
 
-script.on_event({defines.events.on_gui_closed}, function(event)
+script.on_event(defines.events.on_gui_closed, function(event)
     if event.entity and event.entity.name == "shortwave-radio" then
       check_state(event.entity.force)
       radio_tune(event.entity)
@@ -305,10 +283,8 @@ script.on_event({defines.events.on_gui_closed}, function(event)
     end
   end)
 
-
 script.on_init(function()
 end)
 
 script.on_load(function()
 end)
-
