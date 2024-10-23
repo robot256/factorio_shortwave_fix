@@ -1,17 +1,26 @@
-
-blueprintLib = require("__Robot256Lib__/script/blueprint_replacement")
+local math2d = require("math2d")
 
 local function check_state(force)
-  if not global[force.index] then
-    global[force.index] = {}
+  if not storage[force.index] then
+    storage[force.index] = {}
   end
 end
 
+local function get_channel_string(radio)
+  local channel_slot = radio.get_control_behavior().sections[1].get_slot(1)
+  if not channel_slot or not channel_slot.value then
+    return
+  end
+  local channel_string = channel_slot.value.name..":"..channel_slot.min
+  return channel_string
+end
+
 local function check_channels()
-  for team,channels in pairs(global) do
+  for team,channels in pairs(storage) do
     for channel,link in pairs(channels) do
-      local nodes = link.circuit_connected_entities
-      if #nodes.red == 0 and #nodes.green == 0 then
+      local link_red = link.get_wire_connector(defines.wire_connector_id.circuit_red)
+      local link_green = link.get_wire_connector(defines.wire_connector_id.circuit_green)
+      if link_red.connection_count == 0 and link_green.connection_count == 0 then
         link.destroy()
         channels[channel] = nil
       end
@@ -20,22 +29,19 @@ local function check_channels()
 end
 
 local function radio_link(radio)
-  local links = radio.surface.find_entities_filtered({
+  local links = radio.surface.find_entities_filtered{
     name = "shortwave-link",
-    area = {
-      { x = radio.position.x - 0.25, y = radio.position.y - 0.25, },
-      { x = radio.position.x + 0.25, y = radio.position.y + 0.25, },
-    },
-  })
+    area = math2d.bounding_box.create_from_centre(radio.position, 0.5)
+  }
 
   local link = links and links[1]
 
   if not link then
-    link = radio.surface.create_entity({
+    link = radio.surface.create_entity{
       name = "shortwave-link",
       position = radio.position,
       force = radio.force,
-    })
+    }
   end
 
   link.operable = false
@@ -44,21 +50,15 @@ local function radio_link(radio)
 end
 
 local function radio_port(radio)
-  local ports = radio.surface.find_entities_filtered({
+  local ports = radio.surface.find_entities_filtered{
     name = "shortwave-port",
-    area = {
-      { x = radio.position.x - 0.25, y = radio.position.y - 0.25, },
-      { x = radio.position.x + 0.25, y = radio.position.y + 0.25, },
-    },
-  })
+    area = math2d.bounding_box.create_from_centre(radio.position, 0.5)
+  }
 
-  local ghosts = radio.surface.find_entities_filtered({
+  local ghosts = radio.surface.find_entities_filtered{
     ghost_name = "shortwave-port",
-    area = {
-      { x = radio.position.x - 0.25, y = radio.position.y - 0.25, },
-      { x = radio.position.x + 0.25, y = radio.position.y + 0.25, },
-    },
-  })
+    area = math2d.bounding_box.create_from_centre(radio.position, 0.5)
+  }
 
   local port = ports and ports[1]
 
@@ -80,8 +80,7 @@ local function radio_port(radio)
   end
 
   port.operable = false
-  --port.direction = defines.direction.south
-
+  
   return port
 end
 
@@ -89,68 +88,51 @@ local function radio_tune(radio)
   local team = radio.force.index
   local link = radio_link(radio)
   local port = radio_port(radio)
+  local link_red = link.get_wire_connector(defines.wire_connector_id.circuit_red)
+  local link_green = link.get_wire_connector(defines.wire_connector_id.circuit_green)
 
-  for _, l in ipairs(link.circuit_connected_entities.red) do
-    if l.name == "shortwave-link" then
-      link.disconnect_neighbour({
-        wire = defines.wire_type.red,
-        target_entity = l,
-      })
+  for _, connection in pairs(link_red.connections) do
+    if connection.target.owner.name == "shortwave-link" then
+      link_red.disconnect_from(connection.target, defines.wire_origin.script)
+    end
+  end
+  
+  for _, connection in pairs(link_green.connections) do
+    if connection.target.owner.name == "shortwave-link" then
+      link_green.disconnect_from(connection.target, defines.wire_origin.script)
     end
   end
 
-  for _, l in ipairs(link.circuit_connected_entities.green) do
-    if l.name == "shortwave-link" then
-      link.disconnect_neighbour({
-        wire = defines.wire_type.green,
-        target_entity = l,
-      })
-    end
-  end
-
-  local signal = radio.get_control_behavior().get_signal(1)
-
-  if not signal or not signal.signal then
+  local channel = get_channel_string(radio)
+  if not channel then
     return
   end
 
-  local channel = signal.signal.name..":"..signal.count
-
-  if not global[team][channel] then
-    global[team][channel] = radio.surface.create_entity({
+  if not storage[team][channel] then
+    storage[team][channel] = radio.surface.create_entity{
       name = "shortwave-link",
       position = { 0, 0 },
       force = radio.force,
-    })
+    }
   end
 
-  local relay = global[team][channel]
+  local relay = storage[team][channel]
+  local relay_red = relay.get_wire_connector(defines.wire_connector_id.circuit_red)
+  local relay_green = relay.get_wire_connector(defines.wire_connector_id.circuit_green)
 
-  link.connect_neighbour({
-    wire = defines.wire_type.red,
-    target_entity = relay,
-  })
+  link_red.connect_to(relay_red, false, defines.wire_origin.script)
+  link_green.connect_to(relay_green, false, defines.wire_origin.script)
 
-  link.connect_neighbour({
-    wire = defines.wire_type.green,
-    target_entity = relay,
-  })
+  local port_red = port.get_wire_connector(defines.wire_connector_id.combinator_input_red)
+  local port_green = port.get_wire_connector(defines.wire_connector_id.combinator_input_green)
+  
+  link_red.connect_to(port_red, false, defines.wire_origin.script)
+  link_green.connect_to(port_green, false, defines.wire_origin.script)
 
-  link.connect_neighbour({
-    wire = defines.wire_type.red,
-    target_entity = port,
-    target_circuit_id = defines.circuit_connector_id.combinator_input,
-  })
-
-  link.connect_neighbour({
-    wire = defines.wire_type.green,
-    target_entity = port,
-    target_circuit_id = defines.circuit_connector_id.combinator_input,
-  })
 end
 
 local function OnEntityCreated(event)
-  local entity = event.created_entity or event.entity or event.destination
+  local entity = event.entity or event.destination
   -- check for blueprints missing io port or radio body
   if entity.name == "entity-ghost" then
     local r = entity.surface.count_entities_filtered({
@@ -173,27 +155,6 @@ local function OnEntityCreated(event)
       game.print("Broken shortwave blueprint! Cannot blueprint I/O port alone.")
       entity.destroy()
       return
-    end
-  
-  -- check for cheat mode pipette of I/O port
-  elseif entity.name == "shortwave-port" then
-    local stack = event.stack
-    -- If the port was *placed* by a valid blueprint, that means it was insta-placed by cheatmode or editor. Don't check for stranded ports.
-    --game.print(serpent.line(event))
-    --game.print(game.players[event.player_index].cursor_stack.valid_for_read)
-    if not (stack and stack.valid_for_read and (stack.name == "blueprint" or event.stack.name == "blueprint-book")) then
-      local r = entity.surface.count_entities_filtered({
-        name = 'shortwave-radio',
-        area = {
-          left_top = { x = entity.position.x - 0.1, y = entity.position.y - 0.1 },
-          right_bottom = { x = entity.position.x + 0.1, y = entity.position.y + 0.1 },
-        }
-      })
-      if r == 0 then
-        game.print("Can't place shortwave I/O port alone.")
-        entity.destroy()
-        return
-      end
     end
   
   elseif entity.name == "shortwave-radio" then
@@ -229,25 +190,22 @@ end
 remote.add_interface('shortwave', {
     get_channel_merged_signals = function(force, channel)
       local team = force.index
-      if global[team] and global[team][channel] then
-        return global[team][channel].get_merged_signals()
+      if storage[team] and storage[team][channel] then
+        return storage[team][channel].get_signals(defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green)
       end
       return nil
     end,
     get_channel = function(radio)
       if radio and radio.valid and radio.name == 'shortwave-radio' then
-        local signal = radio.get_control_behavior().get_signal(1)
-        if signal and signal.signal then
-          return signal.signal.name..":"..signal.count
-        end
+        return get_channel_string(radio)
       end
-      return nil
     end,
     get_relay = function(force, channel)
       local team = force.index
-      return global[team] and global[team][channel]
+      return storage[team] and storage[team][channel]
     end,
-  })
+  }
+)
 
 
 local built_filters = {
@@ -272,7 +230,11 @@ script.on_event(defines.events.script_raised_destroy, OnEntityRemoved, mined_fil
 script.on_event({defines.events.on_entity_settings_pasted}, OnEntitySettingsPasted)
 
 script.on_event(defines.events.on_player_pipette, function(event)
-    blueprintLib.mapPipette(event, {["shortwave-port"]="shortwave-radio"})
+    local player = game.players[event.player_index]
+    if event.item.name ==  "shortwave-port" then
+      player.cursor_stack.clear()
+      player.pipette_entity({name="shortwave-radio", quality=event.quality})
+    end
   end)
 
 script.on_event(defines.events.on_gui_closed, function(event)
@@ -288,3 +250,22 @@ end)
 
 script.on_load(function()
 end)
+
+
+-- Console commands
+commands.add_command("shortwave-dump", "Dump storage to log", function() log(serpent.block(storage)) end)
+
+------------------------------------------------------------------------------------
+--                    FIND LOCAL VARIABLES THAT ARE USED GLOBALLY                 --
+--                              (Thanks to eradicator!)                           --
+------------------------------------------------------------------------------------
+setmetatable(_ENV,{
+  __newindex=function (self,key,value) --locked_global_write
+    error('\n\n[ER Global Lock] Forbidden global *write*:\n'
+      .. serpent.line{key=key or '<nil>',value=value or '<nil>'}..'\n')
+    end,
+  __index   =function (self,key) --locked_global_read
+    error('\n\n[ER Global Lock] Forbidden global *read*:\n'
+      .. serpent.line{key=key or '<nil>'}..'\n')
+    end ,
+  })

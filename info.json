@@ -1,13 +1,12 @@
 {
   "name": "shortwave_fix",
-  "version": "0.3.2",
-  "factorio_version": "1.1",
-  "title": "Shortwave for 1.1",
+  "version": "0.4.0",
+  "factorio_version": "2.0",
+  "title": "Shortwave for 2.0",
   "author": "robot256",
   "homepage": "https://github.com/robot256/factorio_shortwave_fix",
   "description": "Connect circuit networks via shortwave radio channels.",
   "dependencies": [
-    "base >= 1.1.0",
-    "Robot256Lib"
+    "base"
   ]
 }
