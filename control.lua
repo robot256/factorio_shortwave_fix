@@ -63,7 +63,8 @@ local function radio_port(radio)
   local port = ports and ports[1]
 
   if not port and ghosts and ghosts[1] then
-    _, port = ghosts[1].revive()
+    local ddd
+    ddd, port = ghosts[1].revive()
     table.remove(ghosts, 1)
   end
 
