@@ -220,6 +220,8 @@ script.on_event(defines.events.on_robot_built_entity, OnEntityCreated, built_fil
 script.on_event(defines.events.script_raised_built, OnEntityCreated, built_filters)
 script.on_event(defines.events.on_entity_cloned, OnEntityCreated, built_filters)
 script.on_event(defines.events.script_raised_revive, OnEntityCreated, built_filters)
+script.on_event(defines.events.on_space_platform_built_entity, OnEntityCreated, built_filters)
+
 
     
 local mined_filters = {{filter = "name", name = "shortwave-radio"}}
@@ -227,6 +229,7 @@ script.on_event(defines.events.on_player_mined_entity, OnEntityRemoved, mined_fi
 script.on_event(defines.events.on_robot_pre_mined, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.on_entity_died, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.script_raised_destroy, OnEntityRemoved, mined_filters)
+script.on_event(defines.events.on_space_platform_mined_entity, OnEntityRemoved, mined_filters)
 
 script.on_event({defines.events.on_entity_settings_pasted}, OnEntitySettingsPasted)
 
