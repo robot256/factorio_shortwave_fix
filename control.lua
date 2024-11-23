@@ -190,20 +190,34 @@ end
 
 remote.add_interface('shortwave', {
     get_channel_merged_signals = function(force, channel)
-      local team = force.index
+      local team = force.valid and force.index
       if storage[team] and storage[team][channel] then
         return storage[team][channel].get_signals(defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green)
       end
-      return nil
     end,
     get_channel = function(radio)
-      if radio and radio.valid and radio.name == 'shortwave-radio' then
+      if radio.valid and radio.name == 'shortwave-radio' then
         return get_channel_string(radio)
       end
     end,
     get_relay = function(force, channel)
-      local team = force.index
+      local team = force.valid and force.index
       return storage[team] and storage[team][channel]
+    end,
+    get_relays = function()
+      return storage
+    end,
+    get_force_relays = function(force)
+      local team = force.valid and force.index
+      return storage[team]
+    end,
+    get_relay_channel = function(relay)
+      local team = relay.valid and relay.force.index
+      for channel, entity in pairs(storage[team] or {}) do
+        if relay == entity then
+          return channel
+        end
+      end
     end,
   }
 )
