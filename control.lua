@@ -127,7 +127,7 @@ local function radio_tune(radio, toggle)
 
   local channel = get_channel_string(radio, toggle)
   if not channel then
-    game.print("Radio disabled")
+    --game.print("Radio disabled")
     return
   end
 
@@ -152,7 +152,7 @@ local function radio_tune(radio, toggle)
   link_red.connect_to(port_red, false, defines.wire_origin.script)
   link_green.connect_to(port_green, false, defines.wire_origin.script)
 
-  game.print("Radio tuned")
+  --game.print("Radio tuned")
 end
 
 local function OnEntityCreated(event)
@@ -197,7 +197,6 @@ local function OnEntityRemoved(event)
 end
 
 local function OnEntitySettingChanged(event)
-  game.print(serpent.block(event))
   local entity = event.entity or event.destination
   local toggle = false
   if event.input_name == "shortwave-toggle" then
