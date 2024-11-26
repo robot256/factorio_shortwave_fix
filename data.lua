@@ -55,7 +55,7 @@ data:extend{
     icon_size = 32,
     tile_width = 1,
     tile_height = 1,
-    energy_source = dc.energy_source,
+    energy_source = {type="void"},
     active_energy_usage = dc.active_energy_usage,
     input_connection_bounding_box = {{-0.5,-0.5},{0,0}},
     output_connection_bounding_box = {{-1000000,-1000000},{-1000000,-1000000}},
@@ -171,5 +171,10 @@ data:extend{
     },
     order = "a",
   },
-  
+  {
+    type = "custom-input",
+    name = "shortwave-toggle",
+    key_sequence = "CTRL + R",
+    linked_game_control = "toggle-entity",
+  }
 }

@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.4
+Date: 25. 11. 2024
+  Changes:
+    - Set the Shortwave Radio to use void energy source because checking for power is too annoying. They're solar powered, lol.
+    - Added support for the "enable" switch on the channel combinator. Radios with disabled channel selection combinator will not send or receive signals.
+    - Added support for the "toggle entity" keybind to enable and disable the channel combinator.
+  Bugfixes:
+    - Fixed crash when the logistic section is deleted from the channel combinator. Channel combinator will always be restored to exactly 1 section.
+---------------------------------------------------------------------------------------------------
 Version: 0.4.3
 Date: 22. 11. 2024
   Changes:

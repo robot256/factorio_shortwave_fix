@@ -6,11 +6,32 @@ local function check_state(force)
   end
 end
 
-local function get_channel_string(radio)
-  local channel_slot = radio.get_control_behavior().sections[1].get_slot(1)
+local function get_channel_string(radio, toggle)
+  local cb = radio.get_control_behavior()
+  if cb.sections_count == 0 then
+    cb.add_section()  -- Make sure there is always one section
+  else
+    while cb.sections_count > 1 do
+      cb.remove_section(2)
+    end
+  end
+  
+  -- If "toggle" is true, it means that the toggle-entity keybind is *about to* change the enable state of this combinator.
+  -- It doesn't actually happen until after the linked custom input has executed, so we have to assume that it will toggle in the future.
+  if (not cb.enabled and not toggle) or (cb.enabled and toggle) then
+    return
+  end
+  
+  local section = cb.get_section(1)
+  if not section then
+    return
+  end
+  
+  local channel_slot = section.get_slot(1)
   if not channel_slot or not channel_slot.value then
     return
   end
+  
   local channel_string = channel_slot.value.name..":"..channel_slot.min
   return channel_string
 end
@@ -85,7 +106,7 @@ local function radio_port(radio)
   return port
 end
 
-local function radio_tune(radio)
+local function radio_tune(radio, toggle)
   local team = radio.force.index
   local link = radio_link(radio)
   local port = radio_port(radio)
@@ -104,8 +125,9 @@ local function radio_tune(radio)
     end
   end
 
-  local channel = get_channel_string(radio)
+  local channel = get_channel_string(radio, toggle)
   if not channel then
+    game.print("Radio disabled")
     return
   end
 
@@ -130,6 +152,7 @@ local function radio_tune(radio)
   link_red.connect_to(port_red, false, defines.wire_origin.script)
   link_green.connect_to(port_green, false, defines.wire_origin.script)
 
+  game.print("Radio tuned")
 end
 
 local function OnEntityCreated(event)
@@ -173,8 +196,14 @@ local function OnEntityRemoved(event)
   check_channels()
 end
 
-local function OnEntitySettingsPasted(event)
-  local entity = event.destination
+local function OnEntitySettingChanged(event)
+  game.print(serpent.block(event))
+  local entity = event.entity or event.destination
+  local toggle = false
+  if event.input_name == "shortwave-toggle" then
+    entity = event.player_index and game.players[event.player_index].selected
+    toggle = true
+  end
 
   if not entity or not entity.valid then
     return
@@ -182,7 +211,7 @@ local function OnEntitySettingsPasted(event)
 
   if entity.name == "shortwave-radio" then
     check_state(entity.force)
-    radio_tune(entity)
+    radio_tune(entity, toggle)
     check_channels()
   end
 end
@@ -222,7 +251,7 @@ remote.add_interface('shortwave', {
   }
 )
 
-
+-- When radios are created
 local built_filters = {
     {filter = "name", name = "shortwave-radio"},
     {filter = "name", name = "shortwave-port"},
@@ -236,8 +265,7 @@ script.on_event(defines.events.on_entity_cloned, OnEntityCreated, built_filters)
 script.on_event(defines.events.script_raised_revive, OnEntityCreated, built_filters)
 script.on_event(defines.events.on_space_platform_built_entity, OnEntityCreated, built_filters)
 
-
-    
+-- When radios are destroyed
 local mined_filters = {{filter = "name", name = "shortwave-radio"}}
 script.on_event(defines.events.on_player_mined_entity, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.on_robot_pre_mined, OnEntityRemoved, mined_filters)
@@ -245,29 +273,26 @@ script.on_event(defines.events.on_entity_died, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.script_raised_destroy, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.on_space_platform_mined_entity, OnEntityRemoved, mined_filters)
 
-script.on_event({defines.events.on_entity_settings_pasted}, OnEntitySettingsPasted)
+-- When player changes settings
+script.on_event(defines.events.on_gui_closed, OnEntitySettingChanged)
+script.on_event(defines.events.on_entity_settings_pasted, OnEntitySettingChanged)
+script.on_event("shortwave-toggle", OnEntitySettingChanged)
 
+-- When player pipettes radio
 script.on_event(defines.events.on_player_pipette, function(event)
-    local player = game.players[event.player_index]
-    if event.item.name ==  "shortwave-port" then
-      player.cursor_stack.clear()
-      player.pipette_entity({name="shortwave-radio", quality=event.quality})
-    end
-  end)
-
-script.on_event(defines.events.on_gui_closed, function(event)
-    if event.entity and event.entity.name == "shortwave-radio" then
-      check_state(event.entity.force)
-      radio_tune(event.entity)
-      check_channels()
-    end
-  end)
-
-script.on_init(function()
+  local player = game.players[event.player_index]
+  if event.item.name ==  "shortwave-port" then
+    player.cursor_stack.clear()
+    player.pipette_entity({name="shortwave-radio", quality=event.quality})
+  end
 end)
 
-script.on_load(function()
-end)
+-- No work on startup
+--script.on_init(function()
+--end)
+
+--script.on_load(function()
+--end)
 
 
 -- Console commands
