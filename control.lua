@@ -39,11 +39,16 @@ end
 local function check_channels()
   for team,channels in pairs(storage) do
     for channel,link in pairs(channels) do
-      local link_red = link.get_wire_connector(defines.wire_connector_id.circuit_red)
-      local link_green = link.get_wire_connector(defines.wire_connector_id.circuit_green)
-      if link_red.connection_count == 0 and link_green.connection_count == 0 then
-        link.destroy()
+      if not link or not link.valid then
+        log("Shortwave origin link became invalid for channel "..tostring(team).."."..channel..", channel removed.")
         channels[channel] = nil
+      else
+        local link_red = link.get_wire_connector(defines.wire_connector_id.circuit_red)
+        local link_green = link.get_wire_connector(defines.wire_connector_id.circuit_green)
+        if link_red.connection_count == 0 and link_green.connection_count == 0 then
+          link.destroy()
+          channels[channel] = nil
+        end
       end
     end
   end
