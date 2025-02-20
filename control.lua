@@ -33,12 +33,12 @@ local function get_channel_string(radio, toggle)
   end
   
   local channel_string = channel_slot.value.name..":"..channel_slot.min
-  for i=2,10 do
+  for i=2,section.filters_count do
     channel_slot = section.get_slot(i)
-    if not channel_slot or not channel_slot.value then
-      return channel_string
+    channel_string = channel_string.."." -- Delimit each slot string with a period
+    if channel_slot and channel_slot.value then -- If the slot is non-empty, use its name:value combination
+      channel_string = channel_string..channel_slot.value.name..":"..channel_slot.min
     end
-    channel_string = channel_string..":"..channel_slot.value.name..":"..channel_slot.min
   end
   return channel_string
 end
