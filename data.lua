@@ -1,7 +1,7 @@
 local cc = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
-local dc = table.deepcopy(data.raw["decider-combinator"]["decider-combinator"])
+local dc = data.raw["decider-combinator"]["decider-combinator"]
 
-for _, point in ipairs(cc.circuit_wire_connection_points) do
+for _, point in pairs(cc.circuit_wire_connection_points) do
   point.shadow = point.wire
 end
 
@@ -26,7 +26,7 @@ data:extend{
       "not-deconstructable",
       "placeable-off-grid"
     },
-    health = 1000000,
+    max_health = 1000000,
     selectable_in_game = false,
     collision_mask = {layers={}},
     icon = "__shortwave_fix__/graphics/radio-icon.png",
@@ -46,7 +46,7 @@ data:extend{
       "not-deconstructable",
       "hide-alt-info",
     },
-    health = 1000000,
+    max_health = 1000000,
     selectable_in_game = true,
     collision_mask = { layers={} },
     collision_box = {{-0.25,-0.25},{0.25,0.25}},
@@ -82,6 +82,7 @@ data:extend{
       "not-flammable",
       "not-rotatable",
     },
+    max_health = cc.max_health,
     selectable_in_game = true,
     minable = {
       result = "shortwave-radio",

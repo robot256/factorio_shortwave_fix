@@ -130,7 +130,7 @@ local function radio_port(radio)
     })
   end
 
-  for _, ghost in ipairs(ghosts) do
+  for _, ghost in pairs(ghosts) do
     ghost.destroy()
   end
 
