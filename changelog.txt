@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.5.0
+Date: 25. 03. 2025
+  Features:
+    - Radio channel is now set by all the signals in the radio's constant logistic group instead of just the first slot.
+    - Radio channel now respects quality specifications.
+    - Radio channel is now overridden by Logistic Group Name if one is set. This can be used instead of signal slots.
+    - Added warning message and log data when migrations change channel names that might cause radios to connect or disconnect unintentionally.
+  Bugfixes:
+    - Fixed that radio connection state could become inconsistent if other mods removed items, signals or quality levels.
+---------------------------------------------------------------------------------------------------
 Version: 0.4.6
 Date: 27. 11. 2024
   Bugfixes:
