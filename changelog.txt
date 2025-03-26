@@ -4,6 +4,7 @@ Date: 25. 03. 2025
   Bugfixes:
     - Added missing migration file from last update.
     - Fixed crash when creating a new map or adding mod to an existing save.
+    - Fixed that custom control input was not formatted correctly.
 ---------------------------------------------------------------------------------------------------
 Version: 0.5.1
 Date: 25. 03. 2025
