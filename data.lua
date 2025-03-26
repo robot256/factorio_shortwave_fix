@@ -175,7 +175,7 @@ data:extend{
   {
     type = "custom-input",
     name = "shortwave-toggle",
-    key_sequence = "CTRL + R",
+    key_sequence = "CONTROL + R",
     linked_game_control = "toggle-entity",
   }
 }
