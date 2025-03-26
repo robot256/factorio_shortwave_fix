@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.5.1
+Date: 25. 03. 2025
+  Changes:
+    - Changed the storage table format to avoid name collisions.
+    - Updated tooltip description text to match the new channel behavior.
+    - Improved migration log text.
+  Bugfixes:
+    - Fixed that radios only had 10 health. Now has 120, same as constant combinator.
+    - Fixed that disabled radios were mistakenly flagged as changed in migration log.
+    - Fixed that deleted link entities could still trigger a crash.
+    - Fixed that broken circuit links would not be reconnected until user interaction/mod change.
+---------------------------------------------------------------------------------------------------
 Version: 0.5.0
 Date: 25. 03. 2025
   Features:

@@ -2,19 +2,21 @@ local math2d = require("math2d")
 
 -- Creates a table entry for this force if necessary
 local function check_state(force)
-  if not storage[force.index] then
-    storage[force.index] = {}
+  if not storage.teams[force.index] then
+    storage.teams[force.index] = {}
   end
 end
 
 -- Returns the channel string corresponding with the current combinator state
-local function get_channel_string(radio, toggle)
+local function get_channel_string(radio, toggle, showlog)
   local cb = radio.get_control_behavior()
   
   -- Make sure there is always exactly one section
   if cb.sections_count == 0 then
+    log("Adding logistic section for "..tostring(radio))
     cb.add_section()
-  else
+  elseif cb.sections_count > 1 then
+    log("Removing logistic section(s) for "..tostring(radio).." which has "..tostring(cb.sections_count).." sections")
     while cb.sections_count > 1 do
       cb.remove_section(2)
     end
@@ -34,6 +36,7 @@ local function get_channel_string(radio, toggle)
   
   -- Make sure the first section always stays active. Disable the radio with the constant combinator enable switch.
   if not section.active then
+    log("Setting logistic section active for "..tostring(radio))
     section.active = true
   end
   
@@ -59,25 +62,6 @@ local function get_channel_string(radio, toggle)
     end
   end
   return channel_string
-end
-
--- Checks for channel links with no radios connected anymore, and deletes them
-local function check_channels()
-  for team,channels in pairs(storage) do
-    for channel,link in pairs(channels) do
-      if not link or not link.valid then
-        log("Shortwave origin link became invalid for channel \""..(game.forces[team] and game.forces[team].name or tostring(team)).."::"..channel.."\", channel removed.")
-        channels[channel] = nil
-      else
-        local link_red = link.get_wire_connector(defines.wire_connector_id.circuit_red)
-        local link_green = link.get_wire_connector(defines.wire_connector_id.circuit_green)
-        if link_red.connection_count == 0 and link_green.connection_count == 0 then
-          link.destroy()
-          channels[channel] = nil
-        end
-      end
-    end
-  end
 end
 
 -- Locates or creates the shortwave-link entity associated with this radio
@@ -142,7 +126,7 @@ end
 -- Tries to find the channel this radio is currently connected to
 local function get_existing_channel(link)
   local team = link.force.index
-  if not storage[team] then return end
+  if not storage.teams[team] then return end
   
   -- Find the central link this radio-link is connected to
   local target_relay
@@ -156,7 +140,7 @@ local function get_existing_channel(link)
   
   -- Find the channel this central link is associated with
   if not target_relay then return end
-  for channel, relay in pairs(storage[team]) do
+  for channel, relay in pairs(storage.teams[team]) do
     if relay == target_relay then
       return channel
     end
@@ -173,13 +157,13 @@ local function radio_tune(radio, toggle, showlog)
   local old_channel = get_existing_channel(link)
   local channel = get_channel_string(radio, toggle)
   
-  if old_channel and channel and old_channel == channel then
+  if (old_channel and channel and old_channel == channel) or (not old_channel and not channel) then
     -- New and old channel are identical, nothing to do here
     return false
   end
   
   if showlog then
-    log("Retuning "..tostring(radio)..": \""..(old_channel and (game.forces[team] and game.forces[team].name or tostring(team)).."::"..old_channel or "<disabled>").."\" became \""..(channel and (game.forces[team] and game.forces[team].name or tostring(team)).."::"..channel or "<disabled>").."\"")
+    log("Retuning "..tostring(radio)..": \""..(old_channel and (game.forces[team] and game.forces[team].name or tostring(team)).."::"..old_channel or "<invalid>").."\" became \""..(channel and (game.forces[team] and game.forces[team].name or tostring(team)).."::"..channel or "<disabled>").."\"")
   end
   
   -- Channel changed, remove old wires if any
@@ -205,16 +189,21 @@ local function radio_tune(radio, toggle, showlog)
   end
 
   -- Make central link for new channel if necessary
-  if not storage[team][channel] then
-    storage[team][channel] = radio.surface.create_entity{
+  if not storage.teams[team][channel] then
+    storage.teams[team][channel] = radio.surface.create_entity{
       name = "shortwave-link",
       position = { 0, 0 },
       force = radio.force,
     }
+    storage.objects[script.register_on_object_destroyed(storage.teams[team][channel])] = true
+  elseif not storage.teams[team][channel].valid then
+    -- Clear the invalid channel and force re-checking of all radios, which will include retuning this one to a new link
+    check_channels()
+    return true
   end
 
   -- Connect wires to new relay
-  local relay = storage[team][channel]
+  local relay = storage.teams[team][channel]
   local relay_red = relay.get_wire_connector(defines.wire_connector_id.circuit_red)
   local relay_green = relay.get_wire_connector(defines.wire_connector_id.circuit_green)
 
@@ -229,6 +218,46 @@ local function radio_tune(radio, toggle, showlog)
 
   --game.print("Radio tuned")
   return true
+end
+
+local function retune_all(showlog)
+  local warning = false
+  
+  for _,surface in pairs(game.surfaces) do
+    for _,entity in pairs(surface.find_entities_filtered{name="shortwave-radio"}) do
+      warning = radio_tune(entity, false, showlog) or warning
+    end
+  end
+  
+  return warning
+end
+
+-- Checks for channel links with no radios connected anymore, and deletes them
+function check_channels(second_time)
+  local retune = false
+  for team,channels in pairs(storage.teams) do
+    for channel,link in pairs(channels) do
+      if not link or not link.valid then
+        log("Shortwave origin link became invalid for channel \""..(game.forces[team] and game.forces[team].name or tostring(team)).."::"..channel.."\", channel removed.")
+        channels[channel] = nil
+        retune = true
+      else
+        local link_red = link.get_wire_connector(defines.wire_connector_id.circuit_red)
+        local link_green = link.get_wire_connector(defines.wire_connector_id.circuit_green)
+        if link_red.connection_count == 0 and link_green.connection_count == 0 then
+          link.destroy()
+          channels[channel] = nil
+        end
+      end
+    end
+  end
+  
+  -- If any link was deleted because it was invalid, retune all radios to recreate the link and check again.
+  if retune then
+    assert(not second_time, "Invalid shortwave radio link could not be corrected.")
+    retune_all(true)
+    check_channels(true)
+  end
 end
 
 local function OnEntityCreated(event)
@@ -266,10 +295,49 @@ end
 
 local function OnEntityRemoved(event)
   local entity = event.entity
-  check_state(entity.force)
-  radio_link(entity).destroy()
-  radio_port(entity).destroy()
+  if entity and entity.name == "shortwave-radio" then
+    -- When a radio is destroyed, remove its sub-entities and recheck for excess channels
+    check_state(entity.force)
+    radio_link(entity).destroy()
+    radio_port(entity).destroy()
+  elseif entity and entity.name == "shortwave-link" then
+    -- When a central link is destroyed (not by our script), remove it from the channel table even though it still exists
+    local team = entity.force.index
+    if storage.teams[team] then
+      -- Find the channel this central link is associated with
+      local channels = storage.teams[team]
+      for channel, relay in pairs(channels) do
+        if relay == entity then
+          -- Found it, remove from table
+          log("Shortwave origin link destroyed for channel \""..(game.forces[team] and game.forces[team].name or tostring(team)).."::"..channel.."\", channel removed.")
+          channels[channel] = nil
+
+          -- Disconnect all circuit wires so new ones can be created to the new central link
+          local link_red = entity.get_wire_connector(defines.wire_connector_id.circuit_red)
+          for _, connection in pairs(link_red.connections) do
+            link_red.disconnect_from(connection.target, defines.wire_origin.script)
+          end
+          local link_green = entity.get_wire_connector(defines.wire_connector_id.circuit_green)
+          for _, connection in pairs(link_green.connections) do
+            link_green.disconnect_from(connection.target, defines.wire_origin.script)
+          end
+          
+          -- We removed it from the table so it won't show up as invalid in the consistency check. We still have to retune everything that was connected to it.
+          retune_all(true)
+          break
+        end
+      end
+    end
+  end
   check_channels()
+end
+
+local function OnObjectDestroyed(event)
+  -- If it is one of our central links, recheck all the channels to fix what was broken
+  if storage.objects[event.registration_number] then
+    storage.objects[event.registration_number] = nil
+    check_channels()
+  end
 end
 
 local function OnEntitySettingChanged(event)
@@ -295,8 +363,8 @@ end
 remote.add_interface('shortwave', {
     get_channel_merged_signals = function(force, channel)
       local team = force.valid and force.index
-      if storage[team] and storage[team][channel] then
-        return storage[team][channel].get_signals(defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green)
+      if storage.teams[team] and storage.teams[team][channel] then
+        return storage.teams[team][channel].get_signals(defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green)
       end
     end,
     get_channel = function(radio)
@@ -306,18 +374,18 @@ remote.add_interface('shortwave', {
     end,
     get_relay = function(force, channel)
       local team = force.valid and force.index
-      return storage[team] and storage[team][channel]
+      return storage.teams[team] and storage.teams[team][channel]
     end,
     get_relays = function()
       return storage
     end,
     get_force_relays = function(force)
       local team = force.valid and force.index
-      return storage[team]
+      return storage.teams[team]
     end,
     get_relay_channel = function(relay)
       local team = relay.valid and relay.force.index
-      for channel, entity in pairs(storage[team] or {}) do
+      for channel, entity in pairs(storage.teams[team] or {}) do
         if relay == entity then
           return channel
         end
@@ -340,13 +408,16 @@ script.on_event(defines.events.on_entity_cloned, OnEntityCreated, built_filters)
 script.on_event(defines.events.script_raised_revive, OnEntityCreated, built_filters)
 script.on_event(defines.events.on_space_platform_built_entity, OnEntityCreated, built_filters)
 
--- When radios are destroyed
-local mined_filters = {{filter = "name", name = "shortwave-radio"}}
+-- When radios (or links) are destroyed and raise an event, respond immediately
+local mined_filters = {{filter="name", name="shortwave-radio"}, {filter="name", name="shortwave-link"}}
 script.on_event(defines.events.on_player_mined_entity, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.on_robot_pre_mined, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.on_entity_died, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.script_raised_destroy, OnEntityRemoved, mined_filters)
 script.on_event(defines.events.on_space_platform_mined_entity, OnEntityRemoved, mined_filters)
+
+-- When links are destroyed silently, respond the following tick
+script.on_event(defines.events.on_object_destroyed, OnObjectDestroyed)
 
 -- When player changes settings
 script.on_event(defines.events.on_gui_closed, OnEntitySettingChanged)
@@ -371,15 +442,11 @@ end)
 
 -- On configuration changed, need to recheck that all the channel signals still exist
 script.on_configuration_changed(function()
-  local warning = false
   local old_storage = serpent.block(storage)
   
-  for _,surface in pairs(game.surfaces) do
-    for _,entity in pairs(surface.find_entities_filtered{name="shortwave-radio"}) do
-      -- Log entry for every radio channel that changed due to migration
-      warning = radio_tune(entity, false, true) or warning
-    end
-  end
+  -- First retune all channels and make new central links if necessary. Remember to print a warning if any channels changed.
+  local warning = retune_all(true)
+  -- Then purge unused and invalid links. This might trigger another retune_all() and another check_channels() but nothing will have changed.
   check_channels()
   
   if warning then
