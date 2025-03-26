@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.5.2
+Date: 25. 03. 2025
+  Bugfixes:
+    - Added missing migration file from last update.
+    - Fixed crash when creating a new map or adding mod to an existing save.
+---------------------------------------------------------------------------------------------------
 Version: 0.5.1
 Date: 25. 03. 2025
   Changes:

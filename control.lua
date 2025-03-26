@@ -1,5 +1,10 @@
 local math2d = require("math2d")
 
+function init_globals()
+  storage.teams = storage.teams or {}
+  storage.objects = storage.objects or {}
+end
+
 -- Creates a table entry for this force if necessary
 local function check_state(force)
   if not storage.teams[force.index] then
@@ -235,6 +240,9 @@ end
 -- Checks for channel links with no radios connected anymore, and deletes them
 function check_channels(second_time)
   local retune = false
+  if not storage.teams then
+    init_globals()
+  end
   for team,channels in pairs(storage.teams) do
     for channel,link in pairs(channels) do
       if not link or not link.valid then
@@ -433,12 +441,13 @@ script.on_event(defines.events.on_player_pipette, function(event)
   end
 end)
 
--- No work on startup or install
---script.on_init(function()
---end)
+script.on_init(function()
+  init_globals()
+end)
 
---script.on_load(function()
---end)
+script.on_load(function()
+  init_globals()
+end)
 
 -- On configuration changed, need to recheck that all the channel signals still exist
 script.on_configuration_changed(function()
