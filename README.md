@@ -1,6 +1,8 @@
-# Factorio Mod: Shortwave for 1.1
+# Factorio Mod: Shortwave for 2.0
 
-Hotfix for dorfl's Shortwave mod (https://mods.factorio.com/mod/shortwave) in Factorio 1.1. Also fixes some potential compatibility issues with Space Exploration and Creative Mod, and better pipette behavior using the helper function in Robot256Lib. Feel free to use these changes when the main mod updates!
+Now significantly rewritten fork of dorfl's Shortwave mod (https://mods.factorio.com/mod/shortwave) in Factorio 2.0. Also fixes some potential compatibility issues with Space Exploration and Creative Mod, and better pipette behavior and consistency checking.
+
+Help translate this mod on Crowdin!  https://crowdin.com/project/factorio-mods-localization
 
 Connect or separate circuit networks via shortwave radio channels.
 UPS-friendly and real-time activity -- no on-tick Lua required.
