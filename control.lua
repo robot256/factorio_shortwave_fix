@@ -5,6 +5,12 @@ function init_globals()
   storage.objects = storage.objects or {}
 end
 
+-- Resets rotation and flip to default
+local function reset_rotation(entity)
+  entity.direction = defines.direction.north
+  entity.mirroring = false
+end
+
 -- Creates a table entry for this force if necessary
 local function check_state(force)
   if not storage.teams[force.index] then
@@ -299,6 +305,21 @@ local function OnEntityCreated(event)
     radio_tune(entity)
     check_channels()
   end
+
+  -- lock rotation after building
+  local name = entity.name == "entity-ghost" and entity.ghost_name or entity.name
+  if name == "shortwave-radio" or name == "shortwave-port" then
+    reset_rotation(entity)
+    entity.rotatable = false
+  end
+end
+
+local function OnEntityRotated(event)
+  local entity = event.entity
+  local name = entity.name == "entity-ghost" and entity.ghost_name or entity.name
+  if name == "shortwave-radio" or name == "shortwave-port" then
+    reset_rotation(entity)
+  end
 end
 
 local function OnEntityRemoved(event)
@@ -431,6 +452,10 @@ script.on_event(defines.events.on_entity_cloned, OnEntityCreated, built_filters)
 script.on_event(defines.events.script_raised_revive, OnEntityCreated, built_filters)
 script.on_event(defines.events.on_space_platform_built_entity, OnEntityCreated, built_filters)
 
+-- When Radios (or links) are rotated, revert it to default rotation
+script.on_event(defines.events.on_player_rotated_entity, OnEntityRotated)
+script.on_event(defines.events.on_player_flipped_entity, OnEntityRotated)
+
 -- When radios (or links) are destroyed and raise an event, respond immediately
 local mined_filters = {{filter="name", name="shortwave-radio"}, {filter="name", name="shortwave-link"}}
 script.on_event(defines.events.on_player_mined_entity, OnEntityRemoved, mined_filters)
@@ -488,7 +513,7 @@ commands.add_command("shortwave-dump", "Dump storage to log", function() log(ser
 commands.add_command("shortwave-debug", "Dump storage to console", function() game.print(serpent.block(storage)) end)
 
 
-require("__gvv__.gvv")()
+if script.active_mods["gvv"] then require("__gvv__.gvv")() end
 
 ------------------------------------------------------------------------------------
 --                    FIND LOCAL VARIABLES THAT ARE USED GLOBALLY                 --

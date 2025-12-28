@@ -22,7 +22,6 @@ data:extend{
       "player-creation",
       "not-flammable",
       "not-blueprintable",
-      "not-rotatable",
       "not-deconstructable",
       "placeable-off-grid"
     },
@@ -42,7 +41,6 @@ data:extend{
     flags = {
       "player-creation",
       "not-flammable",
-      "not-rotatable",
       "not-deconstructable",
       "hide-alt-info",
     },
@@ -80,7 +78,6 @@ data:extend{
     flags = {
       "player-creation",
       "not-flammable",
-      "not-rotatable",
     },
     max_health = cc.max_health,
     selectable_in_game = true,
